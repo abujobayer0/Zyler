@@ -1,5 +1,9 @@
 "use client";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import React from "react";
+
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +16,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+
+import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
 import {
   Bot,
@@ -20,10 +26,6 @@ import {
   PlusIcon,
   Presentation,
 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React from "react";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -32,15 +34,10 @@ const items = [
   { label: "Billing", href: "/billing", icon: CreditCard },
 ];
 
-const projects = [
-  { name: "Project 1" },
-  { name: "Project 2" },
-  { name: "Project 3" },
-];
-
 const AppSidebar = () => {
   const pathname = usePathname();
   const { open } = useSidebar();
+  const { projects, projectId, setProjectId } = useProject();
   return (
     <Sidebar side="left" collapsible="icon">
       <SidebarHeader>
@@ -81,15 +78,18 @@ const AppSidebar = () => {
           <SidebarGroupLabel>Your Projects</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects.map(({ name }) => {
+              {projects?.map(({ name, id }) => {
                 return (
                   <SidebarMenuItem key={name}>
                     <SidebarMenuButton asChild>
-                      <div>
+                      <div
+                        onClick={() => setProjectId(id)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <div
                           className={cn(
                             "flex size-6 items-center justify-center rounded-sm border bg-white text-sm text-primary",
-                            { "bg-primary text-white": true },
+                            { "bg-primary text-white": id === projectId },
                           )}
                         >
                           {name[0]}
