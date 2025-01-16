@@ -49,9 +49,10 @@ export const pollCommits = async (projectId: string) => {
     projectId,
     commitHashes,
   );
+  const cleanGithubUrl = githubUrl.replace(/\.git$/, "");
   const summerisesResponse = await Promise.allSettled(
     unprocessedCommits.map((commit) => {
-      return summariseCommits(githubUrl, commit.commitHash);
+      return summariseCommits(cleanGithubUrl, commit.commitHash);
     }),
   );
 
@@ -79,12 +80,13 @@ export const pollCommits = async (projectId: string) => {
   return commits;
 };
 const summariseCommits = async (githubUrl: string, commitHash: string) => {
-  const { data } = await axios.get(`${githubUrl}/commit/${commitHash}.diff`, {
-    headers: {
-      Accept: "application/vnd.github.v3.diff",
-    },
+  const url = `${githubUrl}/commit/${encodeURIComponent(commitHash)}.diff`;
+
+  const { data } = await axios.get(url, {
+    headers: { Accept: "application/vnd.github.v3.diff" },
   });
-  return aiSummariseCommit(data) || "";
+
+  return (await aiSummariseCommit(data)) || "";
 };
 
 const fetchProjectGithubUrl = async (projectId: string) => {
@@ -116,5 +118,3 @@ const filterUnprocessedCommits = async (
   );
   return unprocessedCommits;
 };
-
-pollCommits("cm5xq8kub0006aacfmangrm84");

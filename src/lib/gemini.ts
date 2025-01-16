@@ -6,7 +6,8 @@ const model = genAI.getGenerativeModel({
 });
 
 export const aiSummariseCommit = async (diff: string) => {
-  //https://github.com/abujobayer01/CollaborationBoard/commit/<commithash>.diff
+  //https://github.com/owner/repo-name/commit/<commithash>.diff
+
   const response = await model.generateContent([
     `You are an expert programmer, and trying to summerize a git diff.
     Reminders about the git diff format:
@@ -39,5 +40,6 @@ export const aiSummariseCommit = async (diff: string) => {
     It is given only as an example of appropriate comments.`,
     `Please summarise in the following diff file: \n\n${diff}`,
   ]);
+
   return response.response.text();
 };
