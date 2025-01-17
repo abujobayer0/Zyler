@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import MDEditor from "@uiw/react-md-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Textarea } from "@/components/ui/textarea";
 import useProject from "@/hooks/use-project";
 import { Loader2, Sparkles } from "lucide-react";
@@ -114,7 +115,7 @@ const AskQuestionCard = () => {
               onChange={(e) => setQuestion(e.target.value)}
             />
             <div className="h-4"></div>
-            <Button disabled={loading} type="submit">
+            <Button disabled={loading || !project} type="submit">
               Ask Zyler{" "}
               {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
             </Button>

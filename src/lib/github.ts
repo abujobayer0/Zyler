@@ -78,17 +78,46 @@ export const pollCommits = async (projectId: string) => {
   });
   return commits;
 };
-const summariseCommits = async (githubUrl: string, commitHash: string) => {
+
+export const summariseCommits = async (
+  githubUrl: string,
+  commitHash: string,
+  maxRetries: number = 5,
+  delay: number = 3000,
+): Promise<string> => {
   const url = `${githubUrl}/commit/${commitHash}.diff`;
 
-  const { data } = await axios.get(url, {
-    headers: { Accept: "application/vnd.github.v3.diff" },
-  });
+  let retries = 0;
 
-  return (await aiSummariseCommit(data)) || "";
+  while (retries < maxRetries) {
+    try {
+      const { data } = await axios.get(url, {
+        headers: { Accept: "application/vnd.github.v3.diff" },
+      });
+
+      // Pass the data to the AI summarization function
+      const summary = await aiSummariseCommit(data);
+
+      if (summary) {
+        return summary;
+      }
+
+      console.warn(`Empty summary on attempt ${retries + 1}, retrying...`);
+    } catch (error: any) {
+      console.error(`Error on attempt ${retries + 1}:`, error.message);
+    }
+
+    retries += 1;
+    if (retries < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  console.error(`Failed to summarize commits after ${maxRetries} attempts.`);
+  return "";
 };
 
 const fetchProjectGithubUrl = async (projectId: string) => {
+  if (!projectId) return { project: null, githubUrl: "" };
   const project = await db.project.findUnique({
     where: { id: projectId },
     select: {

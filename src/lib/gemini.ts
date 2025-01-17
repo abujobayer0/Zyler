@@ -50,7 +50,6 @@ export const summariseCode = async (doc: Document) => {
   // Limit the code length to 10,000 characters
   const code = doc.pageContent.slice(0, 10000);
 
-  // Retry logic with exponential backoff
   const maxRetries = 5;
   let attempt = 0;
 
