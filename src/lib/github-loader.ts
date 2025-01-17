@@ -22,7 +22,7 @@ export const loadGithubRepo = async (
   });
 
   const docs = await loader.load();
-  console.log("docs successfully loaded");
+  console.log("Docs successfully loaded! Next phase started...");
   return docs;
 };
 
@@ -41,7 +41,7 @@ export const indexGithubRepo = async (
   const allEmbeddings = await generateEmbeddings(docs);
   await Promise.allSettled(
     allEmbeddings.map(async (embedding, index) => {
-      console.log(`processing ${index} of ${allEmbeddings.length}`);
+      console.log(`Processing ${index} of ${allEmbeddings.length}....`);
       if (!embedding) return;
       const sourceCodeEmbeddings = await db.sourceCodeEmbedding.create({
         data: {

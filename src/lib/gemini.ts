@@ -65,7 +65,7 @@ export const summariseCode = async (doc: Document) => {
         ---
         ${code}
         ---
-        Give me a summary no more than 100 words of the code above.`,
+        Give me a summary no more than 150 words of the code above.`,
       ]);
 
       return response.response.text();
@@ -100,6 +100,6 @@ export const generateEmbedding = async (summary: string) => {
 
   const result = await model.embedContent(summary);
   const embedding = result.embedding;
-  console.log("emedding succeeded");
+  console.log("Emedding succeeded!");
   return embedding.values;
 };

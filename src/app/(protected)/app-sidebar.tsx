@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 
 import {
@@ -38,6 +38,8 @@ const AppSidebar = () => {
   const pathname = usePathname();
   const { open } = useSidebar();
   const { projects, projectId, setProjectId } = useProject();
+
+  const navigate = useRouter();
   return (
     <Sidebar side="left" collapsible="icon">
       <SidebarHeader>
@@ -83,7 +85,13 @@ const AppSidebar = () => {
                   <SidebarMenuItem key={id}>
                     <SidebarMenuButton asChild>
                       <div
-                        onClick={() => setProjectId(id)}
+                        onClick={() => {
+                          setProjectId(id);
+                          const location = pathname.startsWith("/dashboard");
+                          if (!location) {
+                            navigate.push("/dashboard");
+                          }
+                        }}
                         style={{ cursor: "pointer" }}
                       >
                         <div
