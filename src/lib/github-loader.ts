@@ -22,6 +22,7 @@ export const loadGithubRepo = async (
   });
 
   const docs = await loader.load();
+  // setProjectStatus("Docs successfully loaded! Starting embedding...");
   console.log("Docs successfully loaded! Next phase started...");
   return docs;
 };
@@ -31,16 +32,13 @@ export const indexGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
 ) => {
-  console.table({
-    projectId,
-    githubUrl,
-    githubToken,
-    data: "comes successfully",
-  });
   const docs = await loadGithubRepo(cleanGithubUrl(githubUrl), githubToken);
   const allEmbeddings = await generateEmbeddings(docs);
   await Promise.allSettled(
     allEmbeddings.map(async (embedding, index) => {
+      // setProjectStatus(
+      //   `Processing ${embedding.fileName} of ${allEmbeddings.length}....`,
+      // );
       console.log(`Processing ${index} of ${allEmbeddings.length}....`);
       if (!embedding) return;
       const sourceCodeEmbeddings = await db.sourceCodeEmbedding.create({
@@ -86,6 +84,10 @@ const generateEmbeddings = async (docs: Document[]) => {
     );
 
     if (i + batchSize < docs.length) {
+      const text =
+        `Batch ${Math.floor(i / batchSize) + 1} processed. Pausing for ${delayTime / 1000} seconds... ` +
+        `Total files: ${docs.length}, Files processed: ${result.length}`;
+
       console.log(
         `Batch ${i / batchSize + 1} processed. Waiting for ${delayTime / 1000} seconds... total files ${docs.length} completed ${result?.length}`,
       );

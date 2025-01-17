@@ -56,6 +56,7 @@ export const summariseCode = async (doc: Document) => {
   while (attempt < maxRetries) {
     try {
       console.log("Attempting to generate content...");
+      // setProjectStatus(`Generating summary for ${doc.metadata.source}.`);
       // Generate the summary via the model
       const response = await model.generateContent([
         `You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.`,
@@ -78,6 +79,9 @@ export const summariseCode = async (doc: Document) => {
         console.log(
           `Rate limit exceeded. Retrying in ${delayTime / 1000} seconds...`,
         );
+        // setProjectStatus(
+        //   `Rate limit exceeded. Retrying in ${delayTime / 1000} seconds...`,
+        // );
         await delay(delayTime); // Wait before retrying
       } else {
         // If it's another error, throw it
@@ -100,5 +104,6 @@ export const generateEmbedding = async (summary: string) => {
   const result = await model.embedContent(summary);
   const embedding = result.embedding;
   console.log("Emedding succeeded!");
+  // setProjectStatus("Embedding succeded!");
   return embedding.values;
 };

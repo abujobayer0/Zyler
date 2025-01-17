@@ -85,4 +85,76 @@ export const ProjectRouter = createTRPCRouter({
         },
       });
     }),
+  uploadMeeting: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        meetingUrl: z.string(),
+        name: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const meeting = await ctx.db.meeting.create({
+        data: {
+          meetingUrl: input.meetingUrl,
+          name: input.name,
+          projectId: input.projectId,
+        },
+      });
+      return meeting;
+    }),
+  getMeetings: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.meeting.findMany({
+        where: {
+          projectId: input.projectId,
+        },
+        include: { Issues: true },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }),
+  deleteMeeting: protectedProcedure
+    .input(z.object({ meetingId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.issue.deleteMany({
+        where: { meetingId: input.meetingId },
+      });
+      return await ctx.db.meeting.delete({
+        where: { id: input.meetingId },
+      });
+    }),
+  projectDelete: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.meeting.deleteMany({
+        where: { projectId: input.projectId },
+      });
+      await ctx.db.userToProject.deleteMany({
+        where: { projectId: input.projectId },
+      });
+      await ctx.db.sourceCodeEmbedding.deleteMany({
+        where: { projectId: input.projectId },
+      });
+      await ctx.db.question.deleteMany({
+        where: { projectId: input.projectId },
+      });
+      await ctx.db.commit.deleteMany({
+        where: { projectId: input.projectId },
+      });
+
+      return await ctx.db.project.deleteMany({
+        where: { id: input.projectId },
+      });
+    }),
+  getMeetingById: protectedProcedure
+    .input(z.object({ meetingId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.meeting.findUnique({
+        where: { id: input.meetingId },
+        include: { Issues: true },
+      });
+    }),
 });

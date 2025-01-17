@@ -63,6 +63,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-md-editor": "^4.0.5",
     "ai": "^4.0.38",
+    "assemblyai": "^4.8.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
