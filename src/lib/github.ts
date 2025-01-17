@@ -2,6 +2,8 @@ import { db } from "@/server/db";
 import { Octokit } from "octokit";
 import axios from "axios";
 import { aiSummariseCommit } from "./gemini";
+import { cleanGithubUrl } from "./utils";
+
 export const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
@@ -17,9 +19,7 @@ type Response = {
 export const getCommitHashes = async (
   githubUrl: string,
 ): Promise<Response[]> => {
-  const cleanUrl = githubUrl.replace(/\.git$/, "");
-
-  const [owner, repo] = cleanUrl.split("/").slice(-2);
+  const [owner, repo] = cleanGithubUrl(githubUrl).split("/").slice(-2);
   if (!owner || !repo) throw new Error("Invalid owner or repo");
 
   const { data } = await octokit.rest.repos.listCommits({
@@ -49,10 +49,9 @@ export const pollCommits = async (projectId: string) => {
     projectId,
     commitHashes,
   );
-  const cleanGithubUrl = githubUrl.replace(/\.git$/, "");
   const summerisesResponse = await Promise.allSettled(
     unprocessedCommits.map((commit) => {
-      return summariseCommits(cleanGithubUrl, commit.commitHash);
+      return summariseCommits(cleanGithubUrl(githubUrl), commit.commitHash);
     }),
   );
 
@@ -80,7 +79,7 @@ export const pollCommits = async (projectId: string) => {
   return commits;
 };
 const summariseCommits = async (githubUrl: string, commitHash: string) => {
-  const url = `${githubUrl}/commit/${encodeURIComponent(commitHash)}.diff`;
+  const url = `${githubUrl}/commit/${commitHash}.diff`;
 
   const { data } = await axios.get(url, {
     headers: { Accept: "application/vnd.github.v3.diff" },

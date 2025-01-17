@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
+import { indexGithubRepo } from "@/lib/github-loader";
 
 export const ProjectRouter = createTRPCRouter({
   createProject: protectedProcedure
@@ -24,6 +25,7 @@ export const ProjectRouter = createTRPCRouter({
         },
       });
 
+      await indexGithubRepo(project.id, input.githubUrl, input.githubToken);
       await pollCommits(project.id);
       return project;
     }),
@@ -35,4 +37,52 @@ export const ProjectRouter = createTRPCRouter({
       },
     });
   }),
+  getCommits: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      pollCommits(input.projectId)
+        .then()
+        .catch((error) => console.log(error));
+
+      return await ctx.db.commit.findMany({
+        where: {
+          projectId: input.projectId,
+        },
+      });
+    }),
+  saveAnswer: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        question: z.string(),
+        answer: z.string(),
+        filesReferences: z.any(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.question.create({
+        data: {
+          answer: input.answer,
+          fileReferences: input.filesReferences,
+          projectId: input.projectId,
+          question: input.question,
+          userId: ctx.user.userId!,
+        },
+      });
+    }),
+  getQuestions: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.question.findMany({
+        where: {
+          projectId: input.projectId,
+        },
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }),
 });

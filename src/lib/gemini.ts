@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Document } from "@langchain/core/documents";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
 });
@@ -42,4 +44,62 @@ export const aiSummariseCommit = async (diff: string) => {
   ]);
 
   return response.response.text();
+};
+
+export const summariseCode = async (doc: Document) => {
+  // Limit the code length to 10,000 characters
+  const code = doc.pageContent.slice(0, 10000);
+
+  // Retry logic with exponential backoff
+  const maxRetries = 5;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      console.log("Attempting to generate content...");
+      // Generate the summary via the model
+      const response = await model.generateContent([
+        `You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.`,
+        `You are onboarding a junior software engineer and explaining to them the purpose of the ${doc.metadata.source} file.
+        Here is the code:
+        ---
+        ${code}
+        ---
+        Give me a summary no more than 100 words of the code above.`,
+      ]);
+
+      return response.response.text();
+    } catch (error: any) {
+      console.error("Error generating content:", error);
+
+      if (error.status === 429) {
+        // Retry logic if rate limit is hit
+        attempt++;
+        const delayTime = Math.pow(2, attempt) * 1000; // Exponential backoff (1s, 2s, 4s, 8s...)
+        console.log(
+          `Rate limit exceeded. Retrying in ${delayTime / 1000} seconds...`,
+        );
+        await delay(delayTime); // Wait before retrying
+      } else {
+        // If it's another error, throw it
+        throw error;
+      }
+    }
+  }
+
+  throw new Error("Max retries exceeded");
+};
+
+// Delay function to simulate waiting
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const generateEmbedding = async (summary: string) => {
+  const model = genAI.getGenerativeModel({
+    model: "text-embedding-004",
+  });
+
+  const result = await model.embedContent(summary);
+  const embedding = result.embedding;
+  console.log("emedding succeeded");
+  return embedding.values;
 };

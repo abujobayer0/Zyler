@@ -80,7 +80,7 @@ const AppSidebar = () => {
             <SidebarMenu>
               {projects?.map(({ name, id }) => {
                 return (
-                  <SidebarMenuItem key={name}>
+                  <SidebarMenuItem key={id}>
                     <SidebarMenuButton asChild>
                       <div
                         onClick={() => setProjectId(id)}
