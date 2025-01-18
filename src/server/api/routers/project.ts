@@ -129,9 +129,17 @@ export const ProjectRouter = createTRPCRouter({
   projectDelete: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.meeting.deleteMany({
+      const meetings = await ctx.db.meeting.findMany({
         where: { projectId: input.projectId },
+        select: { id: true },
       });
+
+      const meetingIds = meetings.map((meeting) => meeting.id);
+
+      await ctx.db.issue.deleteMany({
+        where: { meetingId: { in: meetingIds } },
+      });
+
       await ctx.db.userToProject.deleteMany({
         where: { projectId: input.projectId },
       });
@@ -144,8 +152,12 @@ export const ProjectRouter = createTRPCRouter({
       await ctx.db.commit.deleteMany({
         where: { projectId: input.projectId },
       });
+      await ctx.db.meeting.deleteMany({
+        where: { projectId: input.projectId },
+      });
 
-      return await ctx.db.project.deleteMany({
+      // Finally, delete the project
+      return await ctx.db.project.delete({
         where: { id: input.projectId },
       });
     }),

@@ -23,6 +23,7 @@ import {
   Bot,
   CreditCard,
   LayoutDashboard,
+  Loader,
   PlusIcon,
   Presentation,
 } from "lucide-react";
@@ -103,6 +104,7 @@ const AppSidebar = () => {
                           {name[0]}
                         </div>
                         <span>{name}</span>
+                        {true && <Loader className="animate-spin" />}
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

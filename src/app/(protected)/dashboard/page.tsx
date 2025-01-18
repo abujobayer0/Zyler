@@ -1,14 +1,18 @@
 "use client";
+
 import useProject from "@/hooks/use-project";
-import { ExternalLink, Github } from "lucide-react";
+import { ExternalLink, Github, Trash2 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import { CommitLog } from "./commit-log";
 import AskQuestionCard from "./ask-question-card";
 import MeetingCard from "./meeting-card";
+import { Button } from "@/components/ui/button";
+import { api } from "@/trpc/react";
 
 const DashboardPage = () => {
   const { project } = useProject();
+  const deleteProject = api.project.projectDelete.useMutation();
 
   return (
     <div>
@@ -33,7 +37,13 @@ const DashboardPage = () => {
         </div>
         <div className="h-4"></div>
         <div className="flex items-center gap-4">
-          Team Members , invite button, achive button
+          Team Members , invite button, achive button{" "}
+          <Button
+            variant={"destructive"}
+            onClick={() => deleteProject.mutate({ projectId: project!.id })}
+          >
+            <Trash2 />
+          </Button>
         </div>
       </div>
       <div className="mt-4">

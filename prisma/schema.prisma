@@ -40,9 +40,15 @@ model Project {
     UserToProject       UserToProject[]
     commits             Commit[]
     SourceCodeEmbedding SourceCodeEmbedding[]
+    status              ProjectStatus         @default(PROCESSING)
 
     savedQuestions Question[]
     meetings       Meeting[]
+}
+
+enum ProjectStatus {
+    PROCESSING
+    COMPLETED
 }
 
 model UserToProject {

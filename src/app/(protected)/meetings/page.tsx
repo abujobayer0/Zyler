@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import useRefetch from "@/hooks/use-refetch";
+import { Loader } from "lucide-react";
 
 const Meetings = () => {
   const { project } = useProject();
@@ -26,7 +27,13 @@ const Meetings = () => {
       <div className="h-6"></div>
       <h1 className="text-xl font-semibold">Meetings</h1>
       {meetings && meetings.length === 0 && <div>No meetings found!</div>}
-      {isPending && <div>Loading...</div>}
+
+      {isPending && (
+        <div className="flex flex-1 flex-grow items-center justify-center">
+          <Loader className="animate-spin" />
+        </div>
+      )}
+
       <ul className="divide-y divide-gray-200">
         {meetings?.map((meeting) => (
           <li
@@ -43,8 +50,8 @@ const Meetings = () => {
                     {meeting.name}
                   </Link>
                   {meeting.status === "PROCESSING" && (
-                    <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">
-                      Processing...
+                    <Badge className="gap-x-2 text-white">
+                      Processing <Loader className="size-3 animate-spin" />
                     </Badge>
                   )}
                 </div>
