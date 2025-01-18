@@ -23,7 +23,7 @@ import {
   Bot,
   CreditCard,
   LayoutDashboard,
-  Loader,
+  // Loader,
   PlusIcon,
   Presentation,
 } from "lucide-react";
@@ -32,7 +32,7 @@ const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Q&A", href: "/qa", icon: Bot },
   { label: "Meetings", href: "/meetings", icon: Presentation },
-  { label: "Billing", href: "/billing", icon: CreditCard },
+  // { label: "Billing", href: "/billing", icon: CreditCard },
 ];
 
 const AppSidebar = () => {
@@ -104,7 +104,7 @@ const AppSidebar = () => {
                           {name[0]}
                         </div>
                         <span>{name}</span>
-                        {true && <Loader className="animate-spin" />}
+                        {/* {true && <Loader className="animate-spin" />} */}
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

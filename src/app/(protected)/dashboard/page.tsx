@@ -9,10 +9,13 @@ import AskQuestionCard from "./ask-question-card";
 import MeetingCard from "./meeting-card";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
+import ArchiveButton from "./archive-button";
+import InviteButton from "./invite-button";
+import TeamMembers from "./team-members";
 
 const DashboardPage = () => {
-  const { project } = useProject();
-  const deleteProject = api.project.projectDelete.useMutation();
+  const { projectId, project } = useProject();
+  // const deleteProject = api.project.projectDelete.useMutation();
 
   return (
     <div>
@@ -37,13 +40,13 @@ const DashboardPage = () => {
         </div>
         <div className="h-4"></div>
         <div className="flex items-center gap-4">
-          Team Members , invite button, achive button{" "}
-          <Button
+          <TeamMembers /> <InviteButton /> <ArchiveButton />
+          {/* <Button
             variant={"destructive"}
-            onClick={() => deleteProject.mutate({ projectId: project!.id })}
+            onClick={() => deleteProject.mutate({ projectId: projectId })}
           >
             <Trash2 />
-          </Button>
+          </Button> */}
         </div>
       </div>
       <div className="mt-4">
