@@ -54,6 +54,10 @@ export const indexGithubRepo = async (
       SET "summaryEmbedding"= ${embedding.embedding}::vector
       WHERE "id"= ${sourceCodeEmbeddings.id}
       `;
+      await db.project.update({
+        where: { id: projectId },
+        data: { status: "COMPLETED" },
+      });
     }),
   );
 };

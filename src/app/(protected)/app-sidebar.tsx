@@ -21,12 +21,14 @@ import useProject from "@/hooks/use-project";
 import { cn } from "@/lib/utils";
 import {
   Bot,
+  CircleX,
   CreditCard,
   LayoutDashboard,
-  // Loader,
+  Loader,
   PlusIcon,
   Presentation,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -81,7 +83,7 @@ const AppSidebar = () => {
           <SidebarGroupLabel>Your Projects</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects?.map(({ name, id }) => {
+              {projects?.map(({ name, id, status }) => {
                 return (
                   <SidebarMenuItem key={id}>
                     <SidebarMenuButton asChild>
@@ -104,7 +106,12 @@ const AppSidebar = () => {
                           {name[0]}
                         </div>
                         <span>{name}</span>
-                        {/* {true && <Loader className="animate-spin" />} */}
+                        {status === "PROCESSING" && (
+                          <Loader className="animate-spin" />
+                        )}
+                        {status === "FAILED" && (
+                          <CircleX className="text-red-500" />
+                        )}
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

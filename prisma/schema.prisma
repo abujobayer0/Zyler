@@ -60,6 +60,7 @@ model Project {
 enum ProjectStatus {
     PROCESSING
     COMPLETED
+    FAILED
 }
 
 model UserToProject {

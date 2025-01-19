@@ -16,7 +16,7 @@ import axios from "axios";
 const MeetingCard = () => {
   const [isUploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const { project } = useProject();
+  const { project, projectId } = useProject();
 
   const processMeeting = useMutation({
     mutationFn: async (data: {

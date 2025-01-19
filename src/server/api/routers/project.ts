@@ -25,8 +25,9 @@ export const ProjectRouter = createTRPCRouter({
         },
       });
 
-      await indexGithubRepo(project.id, input.githubUrl, input.githubToken);
-      await pollCommits(project.id);
+      indexGithubRepo(project.id, input.githubUrl, input.githubToken);
+      pollCommits(project.id);
+
       return project;
     }),
   getProjects: protectedProcedure.query(async ({ ctx }) => {
@@ -177,6 +178,7 @@ export const ProjectRouter = createTRPCRouter({
         data: { deletedAt: new Date() },
       });
     }),
+
   getTeamMembers: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {

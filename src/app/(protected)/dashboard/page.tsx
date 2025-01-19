@@ -10,15 +10,15 @@ import MeetingCard from "./meeting-card";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 import ArchiveButton from "./archive-button";
-// import InviteButton from "./invite-button";
 const InviteButton = dynamic(() => import("./invite-button"), { ssr: false });
 import TeamMembers from "./team-members";
 import dynamic from "next/dynamic";
+import useRefetch from "@/hooks/use-refetch";
 
 const DashboardPage = () => {
   const { projectId, project } = useProject();
-  // const deleteProject = api.project.projectDelete.useMutation();
-
+  const deleteProject = api.project.projectDelete.useMutation();
+  const refetch = useRefetch();
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-y-4">
@@ -43,12 +43,17 @@ const DashboardPage = () => {
         <div className="h-4"></div>
         <div className="flex items-center gap-4">
           <TeamMembers /> <InviteButton /> <ArchiveButton />
-          {/* <Button
+          <Button
             variant={"destructive"}
-            onClick={() => deleteProject.mutate({ projectId: projectId })}
+            size={"sm"}
+            disabled={deleteProject.isPending}
+            onClick={() => {
+              deleteProject.mutate({ projectId: projectId });
+              refetch();
+            }}
           >
             <Trash2 />
-          </Button> */}
+          </Button>
         </div>
       </div>
       <div className="mt-4">
