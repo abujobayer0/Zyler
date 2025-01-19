@@ -53,8 +53,20 @@ model Project {
     SourceCodeEmbedding SourceCodeEmbedding[]
     status              ProjectStatus         @default(PROCESSING)
 
-    savedQuestions Question[]
-    meetings       Meeting[]
+    savedQuestions          Question[]
+    meetings                Meeting[]
+    ProjectProcessingStatus ProjectProcessStatus[]
+}
+
+model ProjectProcessStatus {
+    id        String        @id @default(cuid())
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+    message   String
+    projectId String
+    status    ProjectStatus @default(PROCESSING)
+
+    project Project @relation(fields: [projectId], references: [id])
 }
 
 enum ProjectStatus {

@@ -7,6 +7,10 @@ const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
 });
 
+const embeddingModel = genAI.getGenerativeModel({
+  model: "text-embedding-004",
+});
+
 export const aiSummariseCommit = async (diff: string) => {
   //https://github.com/owner/repo-name/commit/<commithash>.diff
 
@@ -47,8 +51,7 @@ export const aiSummariseCommit = async (diff: string) => {
 };
 
 export const summariseCode = async (doc: Document) => {
-  // Limit the code length to 10,000 characters
-  const code = doc.pageContent.slice(0, 10000);
+  const code = doc.pageContent.slice(0, 6000);
 
   const maxRetries = 5;
   let attempt = 0;
@@ -97,11 +100,7 @@ export const summariseCode = async (doc: Document) => {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const generateEmbedding = async (summary: string) => {
-  const model = genAI.getGenerativeModel({
-    model: "text-embedding-004",
-  });
-
-  const result = await model.embedContent(summary);
+  const result = await embeddingModel.embedContent(summary);
   const embedding = result.embedding;
   console.log("Emedding succeeded!");
   // setProjectStatus("Embedding succeded!");

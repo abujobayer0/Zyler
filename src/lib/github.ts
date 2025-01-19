@@ -124,10 +124,8 @@ const fetchProjectGithubUrl = async (projectId: string) => {
       githubUrl: true,
     },
   });
-  if (!project?.githubUrl) {
-    throw new Error("Project has no github url");
-  }
-  return { project, githubUrl: project?.githubUrl };
+
+  return { project: project, githubUrl: project!.githubUrl };
 };
 
 const filterUnprocessedCommits = async (
@@ -136,6 +134,9 @@ const filterUnprocessedCommits = async (
 ) => {
   const processedCommits = await db.commit.findMany({
     where: { projectId },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
   const unprocessedCommits = commitHashes.filter(

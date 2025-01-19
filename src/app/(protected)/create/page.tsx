@@ -1,10 +1,12 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import useProject from "@/hooks/use-project";
 
 import useRefetch from "@/hooks/use-refetch";
 import { api } from "@/trpc/react";
 import { FolderPlus, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -19,7 +21,8 @@ const CreatePage = () => {
   const { register, handleSubmit, reset } = useForm<FormInput>();
   const createProject = api.project.createProject.useMutation();
   const refetch = useRefetch();
-
+  const router = useRouter();
+  const { setProjectId } = useProject();
   const onSubmit = (data: FormInput) => {
     createProject.mutate(
       {
@@ -28,10 +31,12 @@ const CreatePage = () => {
         githubToken: data.githubToken,
       },
       {
-        onSuccess: () => {
+        onSuccess: (project) => {
           toast.success("Project created successfully!");
           refetch();
           reset();
+          setProjectId(project.id);
+          router.push("/dashboard");
         },
         onError: () => {
           toast.error("Failed to create project. Please try again.");
