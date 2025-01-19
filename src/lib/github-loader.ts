@@ -7,6 +7,7 @@ import { cleanGithubUrl } from "./utils";
 export const loadGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
+  projectId?: string,
 ) => {
   const loader = new GithubRepoLoader(githubUrl, {
     accessToken: githubToken || process.env.GITHUB_TOKEN,
@@ -21,9 +22,22 @@ export const loadGithubRepo = async (
     unknown: "warn",
     maxConcurrency: 5,
   });
-
+  await db.projectProcessStatus.create({
+    data: {
+      projectId: projectId!,
+      status: "PROCESSING",
+      message: "Loading documents from GitHub",
+    },
+  });
   const docs = await loader.load();
-  console.log("Docs successfully loaded! Next phase started...");
+  await db.projectProcessStatus.update({
+    where: { projectId: projectId },
+    data: {
+      message:
+        "Documents successfully loaded! Preparing for summarizing and embedding ",
+    },
+  });
+
   return docs;
 };
 
@@ -32,8 +46,12 @@ export const indexGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
 ) => {
-  const docs = await loadGithubRepo(cleanGithubUrl(githubUrl), githubToken);
-  const allEmbeddings = await generateEmbeddings(docs);
+  const docs = await loadGithubRepo(
+    cleanGithubUrl(githubUrl),
+    githubToken,
+    projectId,
+  );
+  const allEmbeddings = await generateEmbeddings(docs, projectId);
   await Promise.allSettled(
     allEmbeddings.map(async (embedding, index) => {
       console.log(`Processing ${index} of ${allEmbeddings.length}....`);
@@ -51,16 +69,22 @@ export const indexGithubRepo = async (
       SET "summaryEmbedding"= ${embedding.embedding}::vector
       WHERE "id"= ${sourceCodeEmbeddings.id}
       `;
+
       await db.project.update({
         where: { id: projectId },
         data: { status: "COMPLETED" },
+      });
+
+      await db.projectProcessStatus.delete({
+        where: { projectId: projectId },
       });
     }),
   );
 };
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const generateEmbeddings = async (docs: Document[]) => {
+
+const generateEmbeddings = async (docs: Document[], projectId: string) => {
   const batchSize = 5;
   const delayTime = 10000; // 10 seconds delay between batches
 
@@ -106,10 +130,15 @@ const generateEmbeddings = async (docs: Document[]) => {
 
     const estimatedTimeRemainingInMin = Math.floor(estimatedTimeRemaining / 60); // Convert to minutes
 
-    console.log(
-      `Batch ${Math.floor(i / batchSize) + 1} processed. Pausing for ${delayTime / 1000} seconds... ` +
-        `Total files: ${docs.length}, Files processed: ${result.length}. Estimated time remaining: ${estimatedTimeRemainingInMin} minutes.`,
-    );
+    await db.projectProcessStatus.update({
+      where: { projectId: projectId },
+      data: {
+        message:
+          `Batch ${Math.floor(i / batchSize) + 1} processed of ${totalBatches} total batches. ` +
+          `Total files: ${docs.length}, Files processed: ${result.length}. ` +
+          `Estimated time remaining: ${estimatedTimeRemainingInMin} minutes.`,
+      },
+    });
 
     if (i + batchSize < docs.length) {
       await delay(delayTime);

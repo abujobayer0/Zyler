@@ -117,6 +117,15 @@ export const ProjectRouter = createTRPCRouter({
         },
       });
     }),
+  getProjectStatus: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return await ctx.db.projectProcessStatus.findUnique({
+        where: {
+          projectId: input.projectId,
+        },
+      });
+    }),
   deleteMeeting: protectedProcedure
     .input(z.object({ meetingId: z.string() }))
     .mutation(async ({ ctx, input }) => {
