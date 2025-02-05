@@ -46,10 +46,14 @@ const AppSidebar = () => {
   return (
     <Sidebar side="left" collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center">
-          <Image src={"/logo.png"} alt="logo" width={40} height={40} />
-          {open && <h1 className="text-xl font-bold text-primary/80">Zyler</h1>}
-        </div>
+        <Link href="/">
+          <div className="flex items-center">
+            <Image src={"/logo.png"} alt="logo" width={40} height={40} />
+            {open && (
+              <h1 className="text-xl font-bold text-primary/80">Zyler</h1>
+            )}
+          </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

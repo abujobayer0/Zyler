@@ -21,7 +21,7 @@ export const askQuestion = async (question: string, projectId: string) => {
   WHERE 1 - ("summaryEmbedding" <=> ${vectorQuery}::vector) > .5 
   AND "projectId" = ${projectId}
   ORDER BY similarity DESC
-  LIMIT 10
+  LIMIT 5
   `) as { fileName: string; sourceCode: string; summary: string }[];
 
   let context = "";
@@ -45,11 +45,12 @@ export const askQuestion = async (question: string, projectId: string) => {
   
         ### Behavior:
         - **No Guesswork**: Respond strictly using the given context. If insufficient information exists, say: "I'm sorry, but I can't answer based on the provided context."
+        - **Code Generation**: When asked to write code, ensure it follows the patterns and conventions shown in the context, maintaining consistency with the existing codebase.
         - **Markdown Format**: Write responses in markdown for enhanced readability.
         - **Code-Centric**: Include examples and snippets to support technical explanations.
         - **Engagement**: Offer practical, step-by-step advice.
   
-        ### Format:
+        ### Format for Questions:
         **Input**:
         \`\`\`
         START CONTEXT BLOCK
@@ -63,18 +64,16 @@ export const askQuestion = async (question: string, projectId: string) => {
         **Output**:
         \`\`\`
         ### Understanding the 'processFiles' Function
-  
-        The 'processFiles' function handles file uploads by:
-        1. **Validating Input**: Ensures all required fields are present.
-        2. **Processing Data**: Applies transformations to optimize storage.
-           \`\`\`javascript
-           const processedData = data.map(file => optimize(file));
-           \`\`\`
-        3. **Saving Files**: Persists them securely in the database.
-  
-        If more details are needed, let me know!
+        [Detailed explanation...]
         \`\`\`
-  
+
+        ### Format for Code Writing:
+        When asked to write code, provide:
+        1. A brief explanation of the implementation approach
+        2. The complete code solution following codebase patterns
+        3. Instructions for integration if relevant
+        4. Any important considerations or limitations
+
         START CONTEXT BLOCK
         ${context}
         END OF CONTEXT BLOCK

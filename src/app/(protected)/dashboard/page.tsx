@@ -15,9 +15,11 @@ import TeamMembers from "./team-members";
 import dynamic from "next/dynamic";
 import useRefetch from "@/hooks/use-refetch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useRouter } from "next/navigation";
 
 const DashboardPage = () => {
   const { projectId, project } = useProject();
+  const router = useRouter();
   const deleteProject = api.project.projectDelete.useMutation();
   const { data: projectStatus, isPending: isProjectStatusPending } =
     api.project.getProjectStatus.useQuery(
@@ -55,9 +57,10 @@ const DashboardPage = () => {
             variant={"destructive"}
             size={"sm"}
             disabled={deleteProject.isPending}
-            onClick={() => {
+            onClick={async () => {
               deleteProject.mutate({ projectId: projectId });
-              refetch();
+              router.push("/dashboard");
+              await refetch();
             }}
           >
             <Trash2 />
@@ -84,11 +87,9 @@ const DashboardPage = () => {
                         projectStatus &&
                         projectStatus.message}
                     .
-                  </span>
-                  <span className="text-muted-foreground">
-                    We will send you a notification immediately after the
-                    project has been processed.
-                  </span>
+                  </span>{" "}
+                  We will send you a notification immediately after the project
+                  has been processed.
                 </AlertDescription>
               </div>
             </div>

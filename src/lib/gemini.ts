@@ -55,12 +55,28 @@ export const summariseCode = async (doc: Document) => {
 
   const maxRetries = 5;
   let attempt = 0;
+  const baseDelay = 2000; // 2 seconds base delay
 
   while (attempt < maxRetries) {
     try {
-      console.log("Attempting to generate content...");
-      // setProjectStatus(`Generating summary for ${doc.metadata.source}.`);
-      // Generate the summary via the model
+      if (attempt > 0) {
+        // Add jitter to avoid thundering herd problem
+        const jitter = Math.random() * 1000;
+        const delayTime = Math.min(
+          baseDelay * Math.pow(2, attempt) + jitter,
+          30000, // Max delay of 30 seconds
+        );
+        console.log(
+          `Attempt ${attempt + 1}/${maxRetries}: Waiting ${
+            Math.round(delayTime / 100) / 10
+          }s before retry...`,
+        );
+        await delay(delayTime);
+      }
+
+      console.log(
+        `Attempt ${attempt + 1}/${maxRetries}: Generating content...`,
+      );
       const response = await model.generateContent([
         `You are an intelligent senior software engineer who specialises in onboarding junior software engineers onto projects.`,
         `You are onboarding a junior software engineer and explaining to them the purpose of the ${doc.metadata.source} file.
@@ -73,23 +89,18 @@ export const summariseCode = async (doc: Document) => {
 
       return response.response.text();
     } catch (error: any) {
-      console.error("Error generating content:", error);
+      attempt++;
 
       if (error.status === 429) {
-        // Retry logic if rate limit is hit
-        attempt++;
-        const delayTime = Math.pow(2, attempt) * 1000; // Exponential backoff (1s, 2s, 4s, 8s...)
-        console.log(
-          `Rate limit exceeded. Retrying in ${delayTime / 1000} seconds...`,
-        );
-        // setProjectStatus(
-        //   `Rate limit exceeded. Retrying in ${delayTime / 1000} seconds...`,
-        // );
-        await delay(delayTime); // Wait before retrying
-      } else {
-        // If it's another error, throw it
-        throw error;
+        if (attempt >= maxRetries) {
+          throw new Error(`Rate limit exceeded after ${maxRetries} attempts`);
+        }
+        console.warn(`Rate limit hit on attempt ${attempt}/${maxRetries}`);
+        continue;
       }
+
+      // For other errors, throw immediately
+      throw error;
     }
   }
 
@@ -103,6 +114,5 @@ export const generateEmbedding = async (summary: string) => {
   const result = await embeddingModel.embedContent(summary);
   const embedding = result.embedding;
   console.log("Emedding succeeded!");
-  // setProjectStatus("Embedding succeded!");
   return embedding.values;
 };

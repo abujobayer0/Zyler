@@ -50,8 +50,11 @@ export const pollCommits = async (projectId: string) => {
     commitHashes,
   );
   const summerisesResponse = await Promise.allSettled(
-    unprocessedCommits.map((commit) => {
-      return summariseCommits(cleanGithubUrl(githubUrl), commit.commitHash);
+    unprocessedCommits.map(async (commit) => {
+      return await summariseCommits(
+        cleanGithubUrl(githubUrl),
+        commit.commitHash,
+      );
     }),
   );
 

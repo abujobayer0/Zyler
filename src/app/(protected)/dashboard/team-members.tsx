@@ -19,7 +19,7 @@ const TeamMembers = () => {
           alt={member?.user?.firstName || ""}
           height={32}
           width={32}
-          className="select-none rounded-full"
+          className="border-1 select-none rounded-full border bg-white"
         />
       ))}
     </div>

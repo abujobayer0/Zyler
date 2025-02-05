@@ -13,7 +13,7 @@ import {
 
 import { Textarea } from "@/components/ui/textarea";
 import useProject from "@/hooks/use-project";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Save, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { askQuestion } from "./actions";
 import { readStreamableValue } from "ai/rsc";
@@ -32,7 +32,9 @@ const AskQuestionCard = () => {
   >([]);
   const [answers, setAnswers] = useState("");
   const saveAnswer = api.project.saveAnswer.useMutation();
-
+  const [activeTab, setActiveTab] = useState<"answers" | "references">(
+    "answers",
+  );
   const refetch = useRefetch();
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setAnswers("");
@@ -62,40 +64,62 @@ const AskQuestionCard = () => {
               <DialogTitle>
                 <Image src={"/logo.png"} width={40} height={40} alt="logo" />
               </DialogTitle>
-              <Button
-                variant={"outline"}
-                disabled={saveAnswer.isPending}
-                onClick={() => {
-                  saveAnswer.mutate(
-                    {
-                      projectId: project!.id,
-                      question,
-                      answer: answers,
-                      filesReferences,
-                    },
-                    {
-                      onSuccess: () => {
-                        toast.success("Answer saved!");
-                        refetch();
+              <div className="flex w-full items-center justify-between gap-2">
+                <Button
+                  variant={"outline"}
+                  disabled={saveAnswer.isPending}
+                  onClick={() => {
+                    saveAnswer.mutate(
+                      {
+                        projectId: project!.id,
+                        question,
+                        answer: answers,
+                        filesReferences,
                       },
-                      onError: () => {
-                        toast.error("Failed to save answer. Please try again.");
+                      {
+                        onSuccess: () => {
+                          toast.success("Answer saved!");
+                          refetch();
+                        },
+                        onError: () => {
+                          toast.error(
+                            "Failed to save answer. Please try again.",
+                          );
+                        },
                       },
-                    },
-                  );
-                }}
-              >
-                Save Answer
-              </Button>
+                    );
+                  }}
+                >
+                  <Save />
+                  Save Answer
+                </Button>
+                <div className="flex items-center gap-2 pr-4">
+                  <Button
+                    variant={activeTab === "answers" ? "default" : "outline"}
+                    onClick={() => setActiveTab("answers")}
+                  >
+                    Answers
+                  </Button>
+                  <Button
+                    variant={activeTab === "references" ? "default" : "outline"}
+                    onClick={() => setActiveTab("references")}
+                  >
+                    References
+                  </Button>
+                </div>
+              </div>
             </div>
           </DialogHeader>
-          <MDEditor.Markdown
-            source={answers}
-            className="!h-full max-h-[40vh] max-w-[70vw] overflow-scroll"
-          />
-          <div className="h-4"></div>
+          {activeTab === "answers" && (
+            <MDEditor.Markdown
+              source={answers}
+              className="!h-full max-h-[40vh] min-h-[552px] max-w-[70vw] overflow-scroll"
+            />
+          )}
+          {activeTab === "references" && (
+            <CodeReferences filesReferences={filesReferences} />
+          )}
 
-          <CodeReferences filesReferences={filesReferences} />
           <Button type="button" onClick={() => setIsDialogOpen(false)}>
             Close{" "}
           </Button>
