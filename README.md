@@ -120,6 +120,6 @@ MIT License - do cool stuff with it! See [LICENSE](LICENSE) for details.
 
 ---
 
-Made with ❤️ by developers who remember what it's like to be new
+Made with ❤️ by [Abu Jobayer](https://www.linkedin.com/in/abutalhamdjobayer)
 
-Need help? [Join our Discord](your-discord-link) or [Open an Issue](your-repo-issues-link)
+Need help? [Open an Issue](https://github.com/abujobayer0/Zyler/issues)
