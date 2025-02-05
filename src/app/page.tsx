@@ -130,13 +130,13 @@ export default function Home() {
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
                 Your AI-Powered
                 <span className="relative mt-2 block">
-                  <span className="text-primary">Development Assistant</span>
+                  <span className="text-primary">Coding Companion</span>
                 </span>
               </h1>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                Transform your development workflow with AI-powered code
-                understanding and meeting summaries. Perfect for teams who want
-                to move faster.
+                Struggling to understand a new codebase? Zyler helps junior
+                developers navigate and understand code like a pro. Ask anything
+                about the code and get simple explanations instantly.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6 lg:justify-start">
                 <Link href="/create">
@@ -181,11 +181,11 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need to accelerate development
+              Learn and grow with confidence
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Powerful AI features to help your team understand code and
-              communicate effectively.
+              Perfect for bootcamp grads and self-taught developers looking to
+              accelerate their learning.
             </p>
           </div>
 
@@ -194,21 +194,21 @@ export default function Home() {
               {[
                 {
                   icon: Braces,
-                  title: "Code Understanding",
+                  title: "Smart Code Explanations",
                   description:
-                    "Get instant, accurate explanations about any part of your codebase with AI-powered analysis",
+                    "Get line-by-line code breakdowns and understand complex functions with AI-powered analysis that explains things in simple terms.",
                 },
                 {
                   icon: Presentation,
-                  title: "Meeting Summaries",
+                  title: "Meeting Assistant",
                   description:
-                    "Upload meeting recordings and get AI-generated summaries to save time and stay focused",
+                    "Never miss important technical discussions with AI summaries of team meetings and automatic action item tracking.",
                 },
                 {
                   icon: MessagesSquare,
-                  title: "Team Collaboration",
+                  title: "GitHub Integration",
                   description:
-                    "Share insights and knowledge with your entire development team in real-time",
+                    "Connect your repos with one click to better understand pull requests and learn from your team's code changes.",
                 },
               ].map((feature, i) => (
                 <div
