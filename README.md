@@ -1,8 +1,23 @@
 # Zyler - Your AI Coding Companion 🤖
 
-Struggling to understand a new codebase? Zyler is your AI-powered assistant that helps junior developers navigate and understand code like a pro. Built with Next.js 15, TypeScript, and powered by Gemini 1.5 Flash.
+Struggling to understand a new codebase? Zyler is your AI-powered assistant that helps developers navigate and understand code like a pro. Built with Next.js 15, TypeScript, and featuring advanced AI capabilities through Gemini 1.5 Flash with vector search.
 
 ![Zyler Demo](public/logo.png)
+
+## 🧠 AI-Powered Intelligence
+
+- **🔮 Gemini 1.5 Flash Integration**:
+
+  - Advanced code understanding with real-time streaming responses
+  - Context-aware code analysis with vector similarity search
+  - Multi-modal capabilities for processing code, images, and markdown
+  - Custom prompt engineering for developer-focused responses
+
+- **🎯 Vector Search Capabilities**:
+  - PostgreSQL with pgvector for semantic code search
+  - File-level embeddings for intelligent code retrieval
+  - Context-aware question answering
+  - Real-time code pattern matching
 
 ## 🎯 Perfect for Junior Developers
 
@@ -13,90 +28,144 @@ Struggling to understand a new codebase? Zyler is your AI-powered assistant that
 
 ## ✨ Key Features
 
-- **💡 Smart Code Explanations**:
+- **💡 Smart Code Analysis**:
 
-  - Get line-by-line code breakdowns
-  - Understand complex functions and patterns
-  - Learn best practices from existing code
+  - Real-time code explanations with context
+  - Semantic understanding of codebases
+  - File reference tracking and visualization
+  - Intelligent code navigation
 
 - **🎥 Meeting Assistant**:
 
-  - Never miss important technical discussions
-  - Get AI summaries of team meetings
-  - Track action items and decisions
+  - Audio meeting transcription and summarization
+  - Automatic issue extraction and categorization
+  - Timeline-based meeting navigation
+  - Action item tracking
 
 - **🔄 GitHub Integration**:
 
-  - Connect your repos with one click
-  - Understand pull requests better
-  - Learn from your team's code changes
+  - Automatic repository analysis
+  - Commit history tracking with summaries
+  - Team collaboration features
+  - Project-based organization
 
-- **👥 Team Learning**:
-  - Share knowledge with your team
-  - Save and reference past explanations
-  - Learn from others' questions
+- **👥 Team Features**:
+  - Shared project workspaces
+  - Team member invitations
+  - Collaborative Q&A history
+  - Knowledge base building
+
+## 🏗️ Technical Architecture
+
+### AI & Database Stack
+
+- **Gemini Integration**:
+
+  ```typescript
+  const google = createGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+
+  // Streaming responses with context
+  const { textStream } = await streamText({
+    model: google("gemini-1.5-flash"),
+    prompt: `[Custom prompt with context]`,
+  });
+  ```
+
+- **Vector Search**:
+
+  ```sql
+  CREATE EXTENSION vector;
+
+  -- Embeddings for code search
+  CREATE TABLE "SourceCodeEmbedding" (
+    "fileName" TEXT,
+    "sourceCode" TEXT,
+    "summary" TEXT,
+    "summaryEmbedding" vector(1536),
+    "projectId" TEXT
+  );
+  ```
 
 ## 🚀 Getting Started
 
-### What You'll Need
+### Prerequisites
 
-- Node.js 18+ (Don't have it? [Download here](https://nodejs.org/))
-- A GitHub account (It's free!)
-- Basic command line knowledge
+- Node.js 18+ ([Download](https://nodejs.org/))
+- PostgreSQL 14+ with pgvector extension
+- Gemini API key
+- GitHub account
+- Clerk account (for authentication)
+- AssemblyAI API key (for meeting transcription)
+
+### Environment Setup
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/zyler"
+GEMINI_API_KEY="your-gemini-api-key"
+CLERK_SECRET_KEY="your-clerk-secret"
+ASSEMBLY_AI_KEY="your-assembly-ai-key"
+STRIPE_SECRET_KEY="your-stripe-key"
+```
 
 ### Quick Start
 
-1. Clone and enter the project:
+1. Clone and setup:
 
 ```bash
 git clone https://github.com/abujobayer0/Zyler.git
 cd Zyler
 ```
 
-2. Install what you need:
+2. Install dependencies:
 
 ```bash
 bun i   # or: npm install
 ```
 
-3. Set up your environment:
+3. Setup database:
 
 ```bash
-cp .env.example .env
+bun prisma db push
 ```
 
-4. Start the development server:
+4. Start development:
 
 ```bash
-bun dev   # or: npm run dev
+bun dev
 ```
 
-## 📦 How It's Organized
+## 📦 Project Structure
 
 ```bash
 src/
-├── app/                # Where the main code lives
-│ ├── (protected)/     # Stuff you need to log in for
-│ ├── api/            # Backend API routes
-│ └── page.tsx        # Homepage
-├── components/        # Reusable UI pieces
-├── lib/              # Helper functions
-├── server/           # Backend logic
-│ ├── api/           # API definitions
-│ └── db/            # Database setup
-└── styles/           # Make it look pretty
+├── app/
+│ ├── (protected)/     # Auth protected routes
+│ │ ├── dashboard/    # Main dashboard
+│ │ ├── meetings/     # Meeting management
+│ │ └── qa/          # Q&A interface
+│ ├── api/           # API routes
+│ └── page.tsx       # Landing page
+├── components/       # UI components
+├── lib/             # Utilities
+│ ├── gemini/       # AI integration
+│ ├── assembly/     # Meeting processing
+│ └── stripe/       # Payments
+└── server/          # Backend logic
 ```
 
-## 🛠️ Cool Tech We Use
+## 🛠️ Technology Stack
 
-- [Next.js 14](https://nextjs.org/) - The main framework (It's React, but better!)
-- [TypeScript](https://www.typescriptlang.org/) - Helps catch bugs early
-- [Tailwind CSS](https://tailwindcss.com/) - Makes styling easy
+- [Next.js 14](https://nextjs.org/) - React framework
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [PostgreSQL](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) - Vector database
+- [Gemini 1.5 Flash](https://deepmind.google/technologies/gemini/) - AI engine
+- [AssemblyAI](https://www.assemblyai.com/) - Meeting transcription
+- [Clerk](https://clerk.dev/) - Authentication
+- [Stripe](https://stripe.com/) - Payments
 - [tRPC](https://trpc.io/) - Type-safe APIs
-- [Prisma](https://www.prisma.io/) - Makes database stuff easier
-- [Clerk](https://clerk.dev/) - Handles login/signup
-- [Gemini 1.5](https://deepmind.google/technologies/gemini/) - The AI brain
-- [Stripe](https://stripe.com/) - Handles payments
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
 
 ## 🤝 Want to Help?
 
@@ -120,6 +189,6 @@ MIT License - do cool stuff with it! See [LICENSE](LICENSE) for details.
 
 ---
 
-Made with ❤️ by [Abu Jobayer](https://www.linkedin.com/in/abutalhamdjobayer)
+Author ❤️ [Abu Jobayer](https://www.linkedin.com/in/abutalhamdjobayer)
 
 Need help? [Open an Issue](https://github.com/abujobayer0/Zyler/issues)
