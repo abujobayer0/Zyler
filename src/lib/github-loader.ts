@@ -4,11 +4,162 @@ import { generateEmbedding, summariseCode } from "./gemini";
 import { db } from "@/server/db";
 import { cleanGithubUrl } from "./utils";
 
-export const loadGithubRepo = async (
+// Strongly typed configuration
+interface ProcessingConfig {
+  BATCH_SIZE: number;
+  MAX_RETRIES: number;
+  BASE_DELAY: number;
+  MAX_DELAY: number;
+  TIMEOUT: number;
+  JITTER_FACTOR: number;
+}
+
+// Enum for error classification
+enum ErrorType {
+  API_LIMIT = "API_LIMIT",
+  TIMEOUT = "TIMEOUT",
+  NETWORK_ERROR = "NETWORK_ERROR",
+  UNKNOWN = "UNKNOWN",
+}
+
+// Typed interfaces for processing results
+interface ProcessingResult {
+  summary: string;
+  embedding: number[];
+  sourceCode: string;
+  fileName: string;
+}
+
+interface ProcessingError {
+  type: ErrorType;
+  message: string;
+}
+
+// Configuration object with type annotation
+const PROCESSING_CONFIG: ProcessingConfig = {
+  BATCH_SIZE: 3,
+  MAX_RETRIES: 10,
+  BASE_DELAY: 1000,
+  MAX_DELAY: 60000,
+  TIMEOUT: 30000,
+  JITTER_FACTOR: 0.2,
+};
+
+// Error classification function with improved typing
+const classifyError = (error: Error): ErrorType => {
+  const errorMessage = error.message.toLowerCase();
+
+  if (errorMessage.includes("rate limit") || errorMessage.includes("quota")) {
+    return ErrorType.API_LIMIT;
+  }
+
+  if (errorMessage.includes("timeout") || errorMessage.includes("time out")) {
+    return ErrorType.TIMEOUT;
+  }
+
+  if (errorMessage.includes("network") || errorMessage.includes("connection")) {
+    return ErrorType.NETWORK_ERROR;
+  }
+
+  return ErrorType.UNKNOWN;
+};
+
+// Exponential backoff with jitter - typed
+const calculateDelay = (attempt: number): number => {
+  const exponentialDelay = Math.min(
+    PROCESSING_CONFIG.BASE_DELAY * Math.pow(2, attempt),
+    PROCESSING_CONFIG.MAX_DELAY,
+  );
+
+  const jitter =
+    exponentialDelay * PROCESSING_CONFIG.JITTER_FACTOR * Math.random();
+  return exponentialDelay + jitter;
+};
+
+// Advanced document processing with comprehensive typing
+const processDocument = async (
+  doc: Document,
+  projectId: string,
+): Promise<ProcessingResult | null> => {
+  const processAttempt = async (
+    attempt: number = 0,
+  ): Promise<ProcessingResult | null> => {
+    if (attempt >= PROCESSING_CONFIG.MAX_RETRIES) {
+      console.error(
+        `Failed to process document after ${PROCESSING_CONFIG.MAX_RETRIES} attempts`,
+      );
+      return null;
+    }
+
+    try {
+      // Timeout promise with proper typing
+      const timeoutPromise: Promise<never> = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Processing timeout")),
+          PROCESSING_CONFIG.TIMEOUT,
+        ),
+      );
+
+      // Main processing promise
+      const processingPromise = async (): Promise<ProcessingResult> => {
+        const summary = await summariseCode(doc);
+        const embedding = await generateEmbedding(summary || "");
+
+        if (!summary) {
+          throw new Error("Empty summary generated");
+        }
+
+        return {
+          summary,
+          embedding,
+          sourceCode: JSON.parse(JSON.stringify(doc.pageContent)),
+          fileName: doc.metadata.source,
+        };
+      };
+
+      // Race between processing and timeout
+      const result = await Promise.race([processingPromise(), timeoutPromise]);
+
+      return result;
+    } catch (error) {
+      const typedError =
+        error instanceof Error ? error : new Error(String(error));
+      const errorType = classifyError(typedError);
+
+      // Log the specific error
+      console.warn(`Attempt ${attempt + 1} failed: ${typedError.message}`);
+
+      // Determine retry strategy based on error type
+      switch (errorType) {
+        case ErrorType.API_LIMIT:
+          await new Promise((resolve) =>
+            setTimeout(resolve, calculateDelay(attempt) * 2),
+          );
+          break;
+        case ErrorType.TIMEOUT:
+        case ErrorType.NETWORK_ERROR:
+          await new Promise((resolve) =>
+            setTimeout(resolve, calculateDelay(attempt)),
+          );
+          break;
+        default:
+          return null;
+      }
+
+      // Recursive retry
+      return processDocument(doc, projectId);
+    }
+  };
+
+  return processAttempt();
+};
+
+// Load GitHub repository with improved typing
+const loadGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
   projectId?: string,
-) => {
+): Promise<Document[]> => {
   const loader = new GithubRepoLoader(githubUrl, {
     accessToken: githubToken || process.env.GITHUB_TOKEN,
     ignoreFiles: [
@@ -22,183 +173,146 @@ export const loadGithubRepo = async (
     unknown: "warn",
     maxConcurrency: 5,
   });
+
+  // Ensure projectId is not undefined for database operations
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
+
   await db.projectProcessStatus.create({
     data: {
-      projectId: projectId!,
+      projectId,
       status: "PROCESSING",
       message: "Loading documents from GitHub",
     },
   });
+
   const docs = await loader.load();
+
   await db.projectProcessStatus.update({
-    where: { projectId: projectId },
+    where: { projectId },
     data: {
       message:
-        "Documents successfully loaded! Preparing for summarizing and embedding ",
+        "Documents successfully loaded! Preparing for summarizing and embedding",
     },
   });
 
   return docs;
 };
 
-export const indexGithubRepo = async (
-  projectId: string,
+// Main processing function with comprehensive typing
+export const processGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
-) => {
+  projectId?: string,
+): Promise<void> => {
+  // Ensure projectId is not undefined
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
+
   const docs = await loadGithubRepo(
     cleanGithubUrl(githubUrl),
     githubToken,
     projectId,
   );
-  const allEmbeddings = await generateEmbeddings(docs, projectId);
-  await Promise.allSettled(
-    allEmbeddings.map(async (embedding, index) => {
-      console.log(`Processing ${index} of ${allEmbeddings.length}....`);
-      if (!embedding) return;
-      const sourceCodeEmbeddings = await db.sourceCodeEmbedding.create({
-        data: {
-          projectId,
-          summary: embedding.summary,
-          sourceCode: embedding.sourceCode,
-          fileName: embedding.fileName,
-        },
-      });
-      await db.$executeRaw`
-      UPDATE "SourceCodeEmbedding"
-      SET "summaryEmbedding"= ${embedding.embedding}::vector
-      WHERE "id"= ${sourceCodeEmbeddings.id}
-      `;
 
-      await db.project.update({
-        where: { id: projectId },
-        data: { status: "COMPLETED" },
-      });
+  // Process documents in batches with comprehensive error handling
+  const processDocumentBatches = async (): Promise<void> => {
+    const successfulResults: ProcessingResult[] = [];
 
-      await db.projectProcessStatus.delete({
-        where: { projectId: projectId },
-      });
-    }),
-  );
-};
+    // Process in batches
+    for (let i = 0; i < docs.length; i += PROCESSING_CONFIG.BATCH_SIZE) {
+      const batch = docs.slice(i, i + PROCESSING_CONFIG.BATCH_SIZE);
 
-export const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+      // Process batch with Promise.allSettled
+      const batchResults = await Promise.allSettled(
+        batch.map((doc) => processDocument(doc, projectId)),
+      );
 
-const generateEmbeddings = async (docs: Document[], projectId: string) => {
-  const batchSize = 3;
-  const delayTime = 10000;
-  const maxRetries = 3;
-  const result: any[] = [];
+      // Filter and collect successful results
+      const batchSuccesses = batchResults
+        .filter(
+          (result): result is PromiseFulfilledResult<ProcessingResult> =>
+            result.status === "fulfilled" && result.value !== null,
+        )
+        .map((result) => result.value);
 
-  const totalDocs = docs.length;
-  const totalBatches = Math.ceil(totalDocs / batchSize);
+      successfulResults.push(...batchSuccesses);
 
-  for (let i = 0; i < docs.length; i += batchSize) {
-    const batch = docs.slice(i, i + batchSize);
-    let retryCount = 0;
-    let batchSuccess = false;
+      // Update progress
+      await updateProcessingProgress(
+        projectId,
+        successfulResults.length,
+        docs.length,
+      );
 
-    while (!batchSuccess && retryCount < maxRetries) {
-      try {
-        const batchStartTime = Date.now();
-
-        const batchPromises = batch.map(async (doc) => {
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Operation timed out")), 15000),
-          );
-
-          const processingPromise = (async () => {
-            const summary = await summariseCode(doc);
-            const embedding = await generateEmbedding(summary || "");
-            return {
-              summary,
-              embedding,
-              sourceCode: JSON.parse(JSON.stringify(doc.pageContent)),
-              fileName: doc.metadata.source,
-            };
-          })();
-
-          return Promise.race([processingPromise, timeoutPromise]);
-        });
-
-        const batchResults = await Promise.allSettled(batchPromises);
-
-        const successfulResults = batchResults
-          .filter(
-            (r): r is PromiseFulfilledResult<any> => r.status === "fulfilled",
-          )
-          .map((r) => r.value);
-
-        result.push(...successfulResults);
-
-        await updateProgress(
-          projectId,
-          i,
-          batchSize,
-          totalBatches,
-          totalDocs,
-          result.length,
-        );
-
-        const processingTime = Date.now() - batchStartTime;
-        const adaptiveDelay = Math.max(delayTime - processingTime, 5000);
-        await delay(adaptiveDelay);
-
-        batchSuccess = true;
-      } catch (error) {
-        retryCount++;
-        console.error(
-          `Batch ${Math.floor(i / batchSize) + 1} failed. Attempt ${retryCount}/${maxRetries}`,
-        );
-
-        if (retryCount === maxRetries) {
-          await handleBatchFailure(projectId, error);
-          continue;
-        }
-
-        await delay(Math.min(1000 * Math.pow(2, retryCount), 30000));
-      }
+      // Adaptive delay between batches
+      await new Promise((resolve) =>
+        setTimeout(resolve, PROCESSING_CONFIG.BASE_DELAY),
+      );
     }
-  }
 
-  return result;
+    // Final storage and project status update
+    await saveEmbeddings(successfulResults, projectId);
+  };
+
+  await processDocumentBatches();
 };
 
-const updateProgress = async (
+// Update processing progress with strong typing
+const updateProcessingProgress = async (
   projectId: string,
-  currentIndex: number,
-  batchSize: number,
-  totalBatches: number,
-  totalFiles: number,
-  processedFiles: number,
-) => {
-  const currentBatch = Math.floor(currentIndex / batchSize) + 1;
-  const percentComplete = Math.round((processedFiles / totalFiles) * 100);
-
-  if (percentComplete === 100) {
-    await db.project.update({
-      where: { id: projectId },
-      data: { status: "COMPLETED" },
-    });
-  }
+  processedCount: number,
+  totalCount: number,
+): Promise<void> => {
+  const percentComplete = Math.round((processedCount / totalCount) * 100);
 
   await db.projectProcessStatus.update({
     where: { projectId },
     data: {
-      message:
-        `Processing: ${percentComplete}% complete. Batch ${currentBatch}/${totalBatches}. ` +
-        `Files processed: ${processedFiles}/${totalFiles}`,
+      message: `Processing: ${percentComplete}% complete. Processed: ${processedCount}/${totalCount}`,
       status: percentComplete === 100 ? "COMPLETED" : "PROCESSING",
     },
   });
 };
 
-const handleBatchFailure = async (projectId: string, error: any) => {
-  await db.projectProcessStatus.update({
+// Save embeddings to database with improved typing
+const saveEmbeddings = async (
+  results: ProcessingResult[],
+  projectId: string,
+): Promise<void> => {
+  if (results.length === 0) {
+    console.warn("No successful embeddings to save");
+    return;
+  }
+
+  const embeddingOperations = results.map(async (embedding) => {
+    const sourceCodeEmbeddings = await db.sourceCodeEmbedding.create({
+      data: {
+        projectId,
+        summary: embedding.summary,
+        sourceCode: embedding.sourceCode,
+        fileName: embedding.fileName,
+      },
+    });
+
+    await db.$executeRaw`
+      UPDATE "SourceCodeEmbedding"
+      SET "summaryEmbedding" = ${embedding.embedding}::vector
+      WHERE "id" = ${sourceCodeEmbeddings.id}
+    `;
+  });
+
+  await Promise.allSettled(embeddingOperations);
+
+  // Update project status
+  await db.project.update({
+    where: { id: projectId },
+    data: { status: "COMPLETED" },
+  });
+
+  await db.projectProcessStatus.delete({
     where: { projectId },
-    data: {
-      message: `Warning: Some files may have failed to process. Error: ${error.message}`,
-    },
   });
 };

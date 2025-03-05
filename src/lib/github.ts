@@ -3,7 +3,9 @@ import { Octokit } from "octokit";
 import axios from "axios";
 import { aiSummariseCommit } from "./gemini";
 import { cleanGithubUrl } from "./utils";
+import redis from "./redis";
 
+// Initialize Octokit GitHub client
 export const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
@@ -16,6 +18,100 @@ type Response = {
   commitDate: string;
 };
 
+// Advanced retry configuration
+const RETRY_CONFIG = {
+  BASE_DELAY: 1000, // Initial delay between retries
+  MAX_DELAY: 30000, // Maximum delay between retries
+  MAX_ATTEMPTS: 10, // Maximum number of retry attempts
+  TIMEOUT: 15000, // Request timeout
+  JITTER_FACTOR: 0.2, // Random jitter to prevent thundering herd
+};
+
+// Exponential backoff with jitter
+const calculateDelay = (attempt: number): number => {
+  const exponentialDelay = Math.min(
+    RETRY_CONFIG.BASE_DELAY * Math.pow(2, attempt),
+    RETRY_CONFIG.MAX_DELAY,
+  );
+
+  // Add jitter to prevent synchronized retries
+  const jitter = exponentialDelay * RETRY_CONFIG.JITTER_FACTOR * Math.random();
+  return exponentialDelay + jitter;
+};
+
+// Advanced retry function with comprehensive error handling
+export const summariseCommitsWithRetry = async (
+  githubUrl: string,
+  commitHash: string,
+): Promise<string> => {
+  // First, check if the summary is already cached in Redis
+  const cachedSummary = await redis.get(commitHash);
+  if (cachedSummary) {
+    console.log(`Cache hit for commit: ${commitHash}`);
+    return cachedSummary;
+  }
+
+  const url = `${githubUrl}/commit/${commitHash}.diff`;
+
+  const attemptSummarization = async (attempt: number = 0): Promise<string> => {
+    // Check if max attempts reached
+    if (attempt >= RETRY_CONFIG.MAX_ATTEMPTS) {
+      console.error(
+        `Failed to summarize commit ${commitHash} after ${RETRY_CONFIG.MAX_ATTEMPTS} attempts.`,
+      );
+      return "";
+    }
+
+    try {
+      // Set up axios with timeout
+      const response = await axios.get(url, {
+        headers: { Accept: "application/vnd.github.v3.diff" },
+        timeout: RETRY_CONFIG.TIMEOUT,
+      });
+
+      // Attempt AI summarization
+      const summary = await aiSummariseCommit(response.data);
+
+      // Validate summary
+      if (summary && summary.trim() !== "") {
+        // Cache successful summary
+        await redis.set(commitHash, summary, "EX", 3600); // Cache for 1 hour
+        return summary;
+      }
+
+      // Empty summary triggers retry
+      throw new Error("Empty summary received");
+    } catch (error: any) {
+      // Log the specific error
+      console.warn(`Attempt ${attempt + 1} failed: ${error.message}`);
+
+      // Determine if we should retry based on error type
+      const shouldRetry =
+        error.code === "ECONNABORTED" || // Timeout
+        error.response?.status >= 500 || // Server errors
+        error.message === "Empty summary received";
+
+      if (shouldRetry) {
+        // Calculate delay with exponential backoff and jitter
+        const delay = calculateDelay(attempt);
+
+        // Wait before next attempt
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        // Recursive retry
+        return attemptSummarization(attempt + 1);
+      }
+
+      // For non-retryable errors, return empty string
+      return "";
+    }
+  };
+
+  // Start the summarization process
+  return attemptSummarization();
+};
+
+// Keep other functions from the original implementation
 export const getCommitHashes = async (
   githubUrl: string,
 ): Promise<Response[]> => {
@@ -49,76 +145,35 @@ export const pollCommits = async (projectId: string) => {
     projectId,
     commitHashes,
   );
-  const summerisesResponse = await Promise.allSettled(
-    unprocessedCommits.map(async (commit) => {
-      return await summariseCommits(
-        cleanGithubUrl(githubUrl),
-        commit.commitHash,
-      );
-    }),
+
+  // Ensure all commits are summarized
+  const summaries = await Promise.all(
+    unprocessedCommits.map(
+      async (commit) =>
+        await summariseCommitsWithRetry(
+          cleanGithubUrl(githubUrl),
+          commit.commitHash,
+        ),
+    ),
   );
 
-  const summerises = summerisesResponse.map((res) => {
-    if (res.status === "fulfilled") {
-      return res.value;
-    } else {
-      return "";
-    }
+  // Store commit summaries in the database
+  const commits = db.commit.createMany({
+    data: unprocessedCommits.map((commit, index) => ({
+      commitHash: commit.commitHash,
+      commitMessage: commit.commitMessage,
+      projectId: projectId,
+      commitAuthorName: commit.commitAuthorName,
+      commitAuthorAvatar: commit.commitAuthorAvatar,
+      commitDate: commit.commitDate,
+      summery: summaries[index] || "",
+    })),
   });
 
-  const commits = db.commit.createMany({
-    data: summerises.map((summery, index) => {
-      return {
-        commitHash: unprocessedCommits[index]!.commitHash,
-        commitMessage: unprocessedCommits[index]!.commitMessage,
-        projectId: projectId,
-        commitAuthorName: unprocessedCommits[index]!.commitAuthorName,
-        commitAuthorAvatar: unprocessedCommits[index]!.commitAuthorAvatar,
-        commitDate: unprocessedCommits[index]!.commitDate,
-        summery,
-      };
-    }),
-  });
   return commits;
 };
 
-export const summariseCommits = async (
-  githubUrl: string,
-  commitHash: string,
-  maxRetries: number = 5,
-  delay: number = 3000,
-): Promise<string> => {
-  const url = `${githubUrl}/commit/${commitHash}.diff`;
-
-  let retries = 0;
-
-  while (retries < maxRetries) {
-    try {
-      const { data } = await axios.get(url, {
-        headers: { Accept: "application/vnd.github.v3.diff" },
-      });
-
-      // Pass the data to the AI summarization function
-      const summary = await aiSummariseCommit(data);
-
-      if (summary) {
-        return summary;
-      }
-
-      console.warn(`Empty summary on attempt ${retries + 1}, retrying...`);
-    } catch (error: any) {
-      console.error(`Error on attempt ${retries + 1}:`, error.message);
-    }
-
-    retries += 1;
-    if (retries < maxRetries) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-  console.error(`Failed to summarize commits after ${maxRetries} attempts.`);
-  return "";
-};
-
+// Existing helper functions remain the same
 const fetchProjectGithubUrl = async (projectId: string) => {
   if (!projectId) return { project: null, githubUrl: "" };
   const project = await db.project.findUnique({
@@ -142,11 +197,10 @@ const filterUnprocessedCommits = async (
     },
   });
 
-  const unprocessedCommits = commitHashes.filter(
+  return commitHashes.filter(
     (commit) =>
       !processedCommits.some(
         (processedCommit) => processedCommit.commitHash === commit.commitHash,
       ),
   );
-  return unprocessedCommits;
 };

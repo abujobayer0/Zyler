@@ -20,6 +20,7 @@ type FormInput = {
 const CreatePage = () => {
   const { register, handleSubmit, reset } = useForm<FormInput>();
   const createProject = api.project.createProject.useMutation();
+
   const refetch = useRefetch();
   const router = useRouter();
   const { setProjectId } = useProject();
@@ -43,6 +44,7 @@ const CreatePage = () => {
         },
       },
     );
+    router.push("/dashboard");
     return true;
   };
 
