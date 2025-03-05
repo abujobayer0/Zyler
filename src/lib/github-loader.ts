@@ -4,7 +4,6 @@ import { generateEmbedding, summariseCode } from "./gemini";
 import { db } from "@/server/db";
 import { cleanGithubUrl } from "./utils";
 
-// Strongly typed configuration
 interface ProcessingConfig {
   BATCH_SIZE: number;
   MAX_RETRIES: number;
@@ -14,7 +13,6 @@ interface ProcessingConfig {
   JITTER_FACTOR: number;
 }
 
-// Enum for error classification
 enum ErrorType {
   API_LIMIT = "API_LIMIT",
   TIMEOUT = "TIMEOUT",
@@ -22,7 +20,6 @@ enum ErrorType {
   UNKNOWN = "UNKNOWN",
 }
 
-// Typed interfaces for processing results
 interface ProcessingResult {
   summary: string;
   embedding: number[];
@@ -30,12 +27,6 @@ interface ProcessingResult {
   fileName: string;
 }
 
-interface ProcessingError {
-  type: ErrorType;
-  message: string;
-}
-
-// Configuration object with type annotation
 const PROCESSING_CONFIG: ProcessingConfig = {
   BATCH_SIZE: 3,
   MAX_RETRIES: 10,
@@ -45,7 +36,6 @@ const PROCESSING_CONFIG: ProcessingConfig = {
   JITTER_FACTOR: 0.2,
 };
 
-// Error classification function with improved typing
 const classifyError = (error: Error): ErrorType => {
   const errorMessage = error.message.toLowerCase();
 
@@ -64,7 +54,6 @@ const classifyError = (error: Error): ErrorType => {
   return ErrorType.UNKNOWN;
 };
 
-// Exponential backoff with jitter - typed
 const calculateDelay = (attempt: number): number => {
   const exponentialDelay = Math.min(
     PROCESSING_CONFIG.BASE_DELAY * Math.pow(2, attempt),
@@ -76,7 +65,6 @@ const calculateDelay = (attempt: number): number => {
   return exponentialDelay + jitter;
 };
 
-// Advanced document processing with comprehensive typing
 const processDocument = async (
   doc: Document,
   projectId: string,
@@ -92,7 +80,6 @@ const processDocument = async (
     }
 
     try {
-      // Timeout promise with proper typing
       const timeoutPromise: Promise<never> = new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error("Processing timeout")),
@@ -100,7 +87,6 @@ const processDocument = async (
         ),
       );
 
-      // Main processing promise
       const processingPromise = async (): Promise<ProcessingResult> => {
         const summary = await summariseCode(doc);
         const embedding = await generateEmbedding(summary || "");
@@ -117,7 +103,6 @@ const processDocument = async (
         };
       };
 
-      // Race between processing and timeout
       const result = await Promise.race([processingPromise(), timeoutPromise]);
 
       return result;
@@ -126,10 +111,8 @@ const processDocument = async (
         error instanceof Error ? error : new Error(String(error));
       const errorType = classifyError(typedError);
 
-      // Log the specific error
       console.warn(`Attempt ${attempt + 1} failed: ${typedError.message}`);
 
-      // Determine retry strategy based on error type
       switch (errorType) {
         case ErrorType.API_LIMIT:
           await new Promise((resolve) =>
@@ -146,7 +129,6 @@ const processDocument = async (
           return null;
       }
 
-      // Recursive retry
       return processDocument(doc, projectId);
     }
   };
@@ -154,7 +136,6 @@ const processDocument = async (
   return processAttempt();
 };
 
-// Load GitHub repository with improved typing
 const loadGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
@@ -174,7 +155,6 @@ const loadGithubRepo = async (
     maxConcurrency: 5,
   });
 
-  // Ensure projectId is not undefined for database operations
   if (!projectId) {
     throw new Error("Project ID is required");
   }
@@ -200,13 +180,11 @@ const loadGithubRepo = async (
   return docs;
 };
 
-// Main processing function with comprehensive typing
 export const processGithubRepo = async (
   githubUrl: string,
   githubToken?: string,
   projectId?: string,
 ): Promise<void> => {
-  // Ensure projectId is not undefined
   if (!projectId) {
     throw new Error("Project ID is required");
   }
@@ -217,20 +195,16 @@ export const processGithubRepo = async (
     projectId,
   );
 
-  // Process documents in batches with comprehensive error handling
   const processDocumentBatches = async (): Promise<void> => {
     const successfulResults: ProcessingResult[] = [];
 
-    // Process in batches
     for (let i = 0; i < docs.length; i += PROCESSING_CONFIG.BATCH_SIZE) {
       const batch = docs.slice(i, i + PROCESSING_CONFIG.BATCH_SIZE);
 
-      // Process batch with Promise.allSettled
       const batchResults = await Promise.allSettled(
         batch.map((doc) => processDocument(doc, projectId)),
       );
 
-      // Filter and collect successful results
       const batchSuccesses = batchResults
         .filter(
           (result): result is PromiseFulfilledResult<ProcessingResult> =>
@@ -240,27 +214,23 @@ export const processGithubRepo = async (
 
       successfulResults.push(...batchSuccesses);
 
-      // Update progress
       await updateProcessingProgress(
         projectId,
         successfulResults.length,
         docs.length,
       );
 
-      // Adaptive delay between batches
       await new Promise((resolve) =>
         setTimeout(resolve, PROCESSING_CONFIG.BASE_DELAY),
       );
     }
 
-    // Final storage and project status update
     await saveEmbeddings(successfulResults, projectId);
   };
 
   await processDocumentBatches();
 };
 
-// Update processing progress with strong typing
 const updateProcessingProgress = async (
   projectId: string,
   processedCount: number,
@@ -277,7 +247,6 @@ const updateProcessingProgress = async (
   });
 };
 
-// Save embeddings to database with improved typing
 const saveEmbeddings = async (
   results: ProcessingResult[],
   projectId: string,
@@ -306,7 +275,6 @@ const saveEmbeddings = async (
 
   await Promise.allSettled(embeddingOperations);
 
-  // Update project status
   await db.project.update({
     where: { id: projectId },
     data: { status: "COMPLETED" },
